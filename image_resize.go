@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/DAddYE/vips"
 )
@@ -38,65 +40,71 @@ func scanDir(path string) (files []string, hello error) {
 	return
 }
 
-func batchResize(files []string) {
+func batchResize(files []string, wg *sync.WaitGroup) {
 	for i, origPath := range files {
-    fmt.Printf("File %d: ", i+1)
 		newPath := fmt.Sprintf("%s/thumb.%d.jpg", outputDir, i)
-		newSize, oldSize := resizeImage(origPath, newPath)
-    fmt.Printf("Resized from %d to %d\n", oldSize, newSize)
+		go resizeImage(origPath, newPath, i, wg)
 	}
 }
 
-func resizeImage(origName, newName string) (int, int64) {
-	// fmt.Println("vips options:", vipsOptions)
+func resizeImage(origName, newName string, num int, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	origFileStat, _ := os.Stat(origName)
 	origFile, err := os.Open(origName)
 	if err != nil {
 		fmt.Println(err)
-		return 0, origFileStat.Size()
+		return
 	}
 	defer origFile.Close()
 
-  buf, err := ioutil.ReadAll(origFile)
+	buf, err := ioutil.ReadAll(origFile)
 	if err != nil {
 		fmt.Println(err)
-		return 0, origFileStat.Size()
+		return
 	}
 
 	buf, err = vips.Resize(buf, vipsOptions)
 	if err != nil {
 		fmt.Println(err)
-		return 0, origFileStat.Size()
+		return
 	}
 
-  cacheFile, err := os.Create(newName)
+	cacheFile, err := os.Create(newName)
 	if err != nil {
 		fmt.Println(err)
-		return 0, origFileStat.Size()
+		return
 	}
-  defer cacheFile.Close()
+	defer cacheFile.Close()
 
-  _, err = cacheFile.Write(buf)
+	_, err = cacheFile.Write(buf)
 	if err != nil {
 		fmt.Println(err)
-		return 0, origFileStat.Size()
+		return
 	}
 
-	return int(len(buf)), origFileStat.Size()
+	fmt.Printf("Resized image %d from %d to %d\n", num, origFileStat.Size(), int(len(buf)))
 }
 
 func main() {
 	fmt.Println("Image resizer demo")
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	files, _ := scanDir(inputDir)
 	if len(files) == 0 {
 		fmt.Println("no images found in", inputDir)
 		return
+	} else {
+		fmt.Printf("found %d files in %s\n", len(files), inputDir)
 	}
 
-  batchResize(files)
-	// for _, file := range files {
-	// 	resizeImage(file)
-	// }
-	// fmt.Println("image files found:", files)
+	var wg sync.WaitGroup
+	wg.Add(len(files))
+
+	batchResize(files, &wg)
+
+	fmt.Println("Waiting to Finish")
+	wg.Wait()
+	fmt.Println("Terminating...")
 }
