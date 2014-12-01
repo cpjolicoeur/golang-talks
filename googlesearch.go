@@ -24,30 +24,41 @@ func fakeSearch(kind string) Search {
 }
 
 func Google(query string) (results []Result) {
-  c := make(chan Result)
-  go func() { c <- Web(query) }()
-  go func() { c <- Image(query) }()
-  go func() { c <- Video(query) }()
+	c := make(chan Result)
+	go func() { c <- Web(query) }()
+	go func() { c <- Image(query) }()
+	go func() { c <- Video(query) }()
 
-  timeout := time.After(80 * time.Millisecond)
-  for i := 0; i < 3; i++ {
-    select {
-    case result := <-c:
-      results = append(results, result)
-    case <- timeout:
-      fmt.Println("timed out")
-      return
-    }
-  }
+	timeout := time.After(80 * time.Millisecond)
+	for i := 0; i < 3; i++ {
+		select {
+		case result := <-c:
+			results = append(results, result)
+		case <-timeout:
+			fmt.Println("timed out")
+			return
+		}
+	}
 
-  return
+	return
+}
+
+func First(query string, replicas ...Search) Result {
+	c := make(chan Result)
+	searchReplica := func(i int) { c <- replicas[i](query) }
+	for i := range replicas {
+		go searchReplica(i)
+	}
+	return <-c
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	start := time.Now()
-	results := Google("golang")
+	result := First("golang",
+		fakeSearch("replica 1"),
+		fakeSearch("replica 2"))
 	elapsed := time.Since(start)
-	fmt.Println(results)
+	fmt.Println(result)
 	fmt.Println(elapsed)
 }
