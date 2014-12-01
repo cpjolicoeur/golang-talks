@@ -20,7 +20,7 @@ func multiplex(input1, input2 <-chan string) <-chan string {
 	return c
 }
 
-func boring(msg string, quit chan bool) <-chan string {
+func boring(msg string, quit chan string) <-chan string {
 	c := make(chan string)
 
 	go func() {
@@ -29,6 +29,8 @@ func boring(msg string, quit chan bool) <-chan string {
 			case c <- fmt.Sprintf("%s %d", msg, i):
 				// do nothing
 			case <-quit:
+			  // do cleanup stuff here
+			  quit <- "See you later!"
 				return
 			}
 		}
@@ -38,11 +40,12 @@ func boring(msg string, quit chan bool) <-chan string {
 }
 
 func main() {
-	quit := make(chan bool)
+	quit := make(chan string)
 	c := boring("Han", quit)
 
 	for i := rand.Intn(30); i >= 0; i-- {
 		fmt.Println(<-c)
 	}
-	quit <- true
+	quit <- "Bye!"
+  fmt.Printf("Han says: %q\n", <-quit)
 }
