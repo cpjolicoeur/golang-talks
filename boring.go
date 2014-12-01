@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+func multiplex(input1, input2 <-chan string) <-chan string {
+  c := make(chan string)
+  go func() { for { c <- <-input1 } }()
+  go func() { for { c <- <-input2 } }()
+  return c
+}
+
 func boring(msg string) <-chan string {
   c := make(chan string)
 
@@ -20,11 +27,9 @@ func boring(msg string) <-chan string {
 }
 
 func main() {
-  han := boring("Han")
-  chewie := boring("Chewie")
-  for i := 0; i < 5; i++ {
-    fmt.Println(<-han)
-    fmt.Println(<-chewie)
+  c := multiplex(boring("Han"), boring("Chewie"))
+  for i := 0; i < 20; i++ {
+    fmt.Println(<-c)
   }
   fmt.Println("Boring conversation anyways...")
 }
