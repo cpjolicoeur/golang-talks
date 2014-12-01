@@ -36,12 +36,13 @@ func boring(msg string) <-chan string {
 
 func main() {
 	c := boring("Han")
+  timeout := time.After(5 * time.Second)
 	for {
 		select {
 		case s := <-c:
 			fmt.Println(s)
-		case <-time.After(500 * time.Millisecond):
-			fmt.Println("You're too slow.")
+    case <-timeout:
+			fmt.Println("Too much talking.")
 			return
 		}
 	}
