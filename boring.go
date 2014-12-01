@@ -15,4 +15,7 @@ func boring(msg string) {
 
 func main() {
 	go boring("boring")
+	fmt.Println("I'm listening")
+	time.Sleep(2 * time.Second)
+  fmt.Println("You're boring; I'm leaving")
 }
