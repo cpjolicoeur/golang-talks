@@ -14,5 +14,5 @@ func boring(msg string) {
 }
 
 func main() {
-	boring("boring")
+	go boring("boring")
 }
