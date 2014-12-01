@@ -20,9 +20,11 @@ func boring(msg string) <-chan string {
 }
 
 func main() {
-  c := boring("boring!")
+  han := boring("Han")
+  chewie := boring("Chewie")
   for i := 0; i < 5; i++ {
-    fmt.Printf("You say: %q\n", <-c)
+    fmt.Println(<-han)
+    fmt.Println(<-chewie)
   }
-  fmt.Println("You're boring; I'm leaving")
+  fmt.Println("Boring conversation anyways...")
 }
