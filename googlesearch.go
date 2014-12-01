@@ -24,9 +24,16 @@ func fakeSearch(kind string) Search {
 }
 
 func Google(query string) (results []Result) {
-  results = append(results, Web(query))
-  results = append(results, Image(query))
-  results = append(results, Video(query))
+  c := make(chan Result)
+  go func() { c <- Web(query) }()
+  go func() { c <- Image(query) }()
+  go func() { c <- Video(query) }()
+
+  for i := 0; i < 3; i++ {
+    result := <-c
+    results = append(results, result)
+  }
+
   return
 }
 
