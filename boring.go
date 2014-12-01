@@ -6,27 +6,26 @@ import (
 	"time"
 )
 
-type Message struct {
-  str string
-  wait chan bool
-}
-
-func multiplex(input1, input2 <-chan Message) <-chan Message {
-  c := make(chan Message)
-  go func() { for { c <- <-input1 } }()
-  go func() { for { c <- <-input2 } }()
+func multiplex(input1, input2 <-chan string) <-chan string {
+  c := make(chan string)
+  go func() {
+    for {
+      select {
+      case s := <-input1: c <- s
+      case s := <-input2: c <- s
+      }
+    }
+  }()
   return c
 }
 
-func boring(msg string) <-chan Message {
-  c := make(chan Message)
-  waitForIt := make(chan bool)
+func boring(msg string) <-chan string {
+  c := make(chan string)
 
   go func() {
     for i := 0; ; i++ {
-      c <- Message{ fmt.Sprintf("%s %d", msg, i), waitForIt }
+      c <- fmt.Sprintf("%s %d", msg, i)
       time.Sleep(time.Duration(rand.Intn(1e3)) * time.Millisecond)
-      <-waitForIt
     }
   }()
 
@@ -36,10 +35,7 @@ func boring(msg string) <-chan Message {
 func main() {
   c := multiplex(boring("Han"), boring("Chewie"))
   for i := 0; i < 20; i++ {
-    msg1 := <-c; fmt.Println(msg1.str)
-    msg2 := <-c; fmt.Println(msg2.str)
-    msg1.wait <- true
-    msg2.wait <- true
+    fmt.Println(<-c)
   }
   fmt.Println("Boring conversation anyways...")
 }
